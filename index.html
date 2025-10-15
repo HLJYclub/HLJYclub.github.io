@@ -1,0 +1,448 @@
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>翻牌对对碰 - 记忆卡牌游戏</title>
+    <!-- 引入外部资源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        secondary: '#f97316',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        game: ['"Comic Sans MS"', '"Marker Felt"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- 自定义样式 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto { content-visibility: auto; }
+            .card-container {
+                perspective: 1000px;
+                width: 100%;
+                height: 100%;
+            }
+            .card {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                transition: transform 0.6s;
+                transform-style: preserve-3d;
+                cursor: pointer;
+            }
+            .card.flipped {
+                transform: rotateY(180deg);
+            }
+            .card-front, .card-back {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            .card-front {
+                background: white;
+                transform: rotateY(180deg);
+            }
+            .card-back {
+                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                color: white;
+            }
+            .rules-box {
+                background: white;
+                border-radius: 10px;
+                padding: 1.5rem;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .toast {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 10px 20px;
+                background: rgba(0,0,0,0.7);
+                color: white;
+                border-radius: 5px;
+                opacity: 0;
+                transition: opacity 0.3s;
+                z-index: 1000;
+            }
+            .toast.show {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 to-purple-100 min-h-screen font-game p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- 标题 -->
+        <header class="text-center mb-6">
+            <h1 class="text-[clamp(1.8rem,5vw,3rem)] font-bold text-primary">
+                <i class="fa fa-clover mr-2 text-secondary"></i>翻牌对对碰
+            </h1>
+        </header>
+        
+        <!-- 控制区和规则区 -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-xl p-4 mb-6 flex flex-wrap justify-between gap-4">
+            <button id="restart-btn" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all self-start">
+                <i class="fa fa-refresh"></i> 重新开始
+            </button>
+            
+            <!-- 保存和读取按钮 -->
+            <div class="flex gap-2">
+                <button id="save-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all self-start">
+                    <i class="fa fa-save"></i> 保存进度
+                </button>
+                <button id="load-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all self-start">
+                    <i class="fa fa-load"></i> 读取进度
+                </button>
+            </div>
+            
+            <!-- 游戏规则按钮 -->
+            <button id="rules-btn" class="bg-secondary hover:bg-secondary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all self-start">
+                <i class="fa fa-book"></i> 游戏规则
+            </button>
+        </div>
+        
+        <!-- 游戏规则弹窗 -->
+        <div id="rules-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+            <div class="rules-box max-w-md w-full mx-4 transform transition-all">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xl font-bold text-primary">游戏规则</h2>
+                    <button id="close-rules" class="text-gray-500 hover:text-gray-700">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+                <hr class="mb-4">
+                <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                    <li>场上共有64张牌，32对相同的牌</li>
+                    <li>所有卡牌初始状态均为背面朝上</li>
+                    <li>点击任意卡牌可将其翻转，显示正面图片</li>
+                    <li>每次最多可翻开两张卡牌</li>
+                    <li>若两张卡牌图片相同，则匹配成功，将保持翻开状态</li>
+                    <li>若两张卡牌图片不同，则会在1秒后自动翻回背面</li>
+                    <li>成功匹配所有32对卡牌后，游戏完成</li>
+                    <li>（小红1次 大红四格以上2次 大大红9格以上3次）</li>
+                </ul>
+                <div class="mt-4 text-center text-sm text-gray-500">
+                    祝你玩得开心！
+                </div>
+            </div>
+        </div>
+        
+        <!-- 游戏结束提示 (只在完成时显示) -->
+        <div id="completion-message" class="text-center mb-4 text-lg font-semibold text-green-600 hidden">恭喜你，完成了所有配对！</div>
+        
+        <!-- 提示消息 -->
+        <div id="toast-message" class="toast">操作成功！</div>
+        
+        <!-- 游戏区 -->
+        <div id="game-board" class="grid grid-cols-8 gap-2 sm:gap-3"></div>
+    </div>
+
+    <script>
+        // 游戏配置
+        const config = {
+            cardCount: 64, // 8x8网格
+            pairsCount: 32,
+            imageBase: 'images/img',
+            imageExt: '.png',
+            saveKey: 'memoryCardGameSave' // 本地存储键名
+        };
+        
+        // 游戏状态
+        let game = {
+            cards: [],
+            flipped: [],
+            matched: 0,
+            locked: false,
+            // 用于保存的额外信息
+            startTime: new Date().getTime(),
+            lastSaved: null
+        };
+        
+        // DOM元素
+        const gameBoard = document.getElementById('game-board');
+        const restartBtn = document.getElementById('restart-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const loadBtn = document.getElementById('load-btn');
+        const completionMessage = document.getElementById('completion-message');
+        const rulesBtn = document.getElementById('rules-btn');
+        const rulesModal = document.getElementById('rules-modal');
+        const closeRules = document.getElementById('close-rules');
+        const toastMessage = document.getElementById('toast-message');
+        
+        // 初始化游戏
+        function initGame() {
+            // 重置游戏状态
+            game = {
+                cards: [],
+                flipped: [],
+                matched: 0,
+                locked: false,
+                startTime: new Date().getTime(),
+                lastSaved: null
+            };
+            gameBoard.innerHTML = '';
+            completionMessage.classList.add('hidden'); // 隐藏完成提示
+            
+            // 创建卡牌数据
+            createCards();
+            
+            // 渲染卡牌
+            renderCards();
+        }
+        
+        // 创建卡牌数据
+        function createCards() {
+            // 创建32对卡牌
+            for (let i = 1; i <= config.pairsCount; i++) {
+                const image = `${config.imageBase}${i}${config.imageExt}`;
+                // 每对卡牌两个实例
+                game.cards.push({ id: `card-${i}-a`, image, matched: false });
+                game.cards.push({ id: `card-${i}-b`, image, matched: false });
+            }
+            
+            // 随机排序
+            game.cards.sort(() => Math.random() - 0.5);
+        }
+        
+        // 渲染卡牌
+        function renderCards() {
+            const cardSize = window.innerWidth < 640 ? '60px' : '80px';
+            
+            gameBoard.innerHTML = ''; // 清空游戏板
+            
+            game.cards.forEach((card, index) => {
+                // 创建卡牌容器
+                const container = document.createElement('div');
+                container.style.width = cardSize;
+                container.style.height = cardSize;
+                
+                // 创建卡牌元素
+                const cardEl = document.createElement('div');
+                cardEl.className = `card ${card.flipped ? 'flipped' : ''}`;
+                cardEl.dataset.index = index;
+                
+                // 卡牌正面（图片）
+                const front = document.createElement('div');
+                front.className = 'card-front';
+                
+                const img = document.createElement('img');
+                img.src = card.image + '?t=' + new Date().getTime();
+                img.alt = `卡牌 ${index + 1}`;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '6px';
+                img.onerror = function() {
+                    this.src = '';
+                    this.alt = '图片缺失';
+                    front.innerHTML = `<i class="fa fa-picture-o text-gray-400 text-2xl"></i>`;
+                };
+                
+                front.appendChild(img);
+                
+                // 卡牌背面（问号）
+                const back = document.createElement('div');
+                back.className = 'card-back';
+                back.innerHTML = '<i class="fa fa-question text-2xl"></i>';
+                
+                // 组装卡牌
+                cardEl.appendChild(front);
+                cardEl.appendChild(back);
+                cardEl.addEventListener('click', () => handleCardClick(index));
+                
+                container.appendChild(cardEl);
+                gameBoard.appendChild(container);
+            });
+        }
+        
+        // 处理卡牌点击
+        function handleCardClick(index) {
+            const card = game.cards[index];
+            const cardEl = gameBoard.children[index].querySelector('.card');
+            
+            // 防止无效点击
+            if (
+                game.locked || 
+                game.flipped.includes(index) || 
+                card.matched
+            ) {
+                return;
+            }
+            
+            // 翻转卡牌
+            cardEl.classList.add('flipped');
+            card.flipped = true; // 更新数据状态
+            game.flipped.push(index);
+            
+            // 如果翻开了两张牌，检查匹配
+            if (game.flipped.length === 2) {
+                checkForMatch();
+            }
+        }
+        
+        // 检查匹配
+        function checkForMatch() {
+            game.locked = true; // 锁定游戏防止连续点击
+            const [index1, index2] = game.flipped;
+            const card1 = game.cards[index1];
+            const card2 = game.cards[index2];
+            
+            if (card1.image === card2.image) {
+                // 匹配成功
+                card1.matched = true;
+                card2.matched = true;
+                game.matched++;
+                
+                // 清空翻开的卡牌
+                game.flipped = [];
+                game.locked = false;
+                
+                // 检查游戏是否结束
+                if (game.matched === config.pairsCount) {
+                    setTimeout(() => {
+                        completionMessage.classList.remove('hidden');
+                    }, 500);
+                }
+            } else {
+                // 匹配失败，翻回卡牌（不显示提示）
+                setTimeout(() => {
+                    const cardEl1 = gameBoard.children[index1].querySelector('.card');
+                    const cardEl2 = gameBoard.children[index2].querySelector('.card');
+                    
+                    cardEl1.classList.remove('flipped');
+                    cardEl2.classList.remove('flipped');
+                    
+                    // 更新数据状态
+                    card1.flipped = false;
+                    card2.flipped = false;
+                    
+                    // 重置状态
+                    game.flipped = [];
+                    game.locked = false;
+                }, 1000);
+            }
+        }
+        
+        // 保存游戏进度
+        function saveGameProgress() {
+            try {
+                // 准备要保存的数据
+                const saveData = {
+                    cards: game.cards,
+                    matched: game.matched,
+                    flipped: game.flipped,
+                    locked: game.locked,
+                    startTime: game.startTime,
+                    lastSaved: new Date().getTime()
+                };
+                
+                // 保存到本地存储
+                localStorage.setItem(config.saveKey, JSON.stringify(saveData));
+                
+                // 更新游戏状态中的保存时间
+                game.lastSaved = saveData.lastSaved;
+                
+                // 显示提示
+                showToast('游戏进度已保存！');
+            } catch (error) {
+                console.error('保存游戏进度失败:', error);
+                showToast('保存失败，请重试', 3000);
+            }
+        }
+        
+        // 读取游戏进度
+        function loadGameProgress() {
+            try {
+                // 从本地存储读取数据
+                const savedData = localStorage.getItem(config.saveKey);
+                
+                if (!savedData) {
+                    showToast('没有找到保存的进度', 3000);
+                    return;
+                }
+                
+                // 解析保存的数据
+                const parsedData = JSON.parse(savedData);
+                
+                // 恢复游戏状态
+                game = {
+                    ...parsedData,
+                    // 确保锁定状态为false，避免加载后无法操作
+                    locked: false,
+                    // 清空当前翻开的牌，避免加载后状态不一致
+                    flipped: []
+                };
+                
+                // 重新渲染游戏
+                renderCards();
+                
+                // 显示提示
+                const saveTime = new Date(parsedData.lastSaved).toLocaleString();
+                showToast(`已加载保存的进度 (${saveTime})`);
+                
+                // 检查游戏是否已完成
+                if (game.matched === config.pairsCount) {
+                    completionMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('读取游戏进度失败:', error);
+                showToast('读取失败，请重试', 3000);
+            }
+        }
+        
+        // 显示提示消息
+        function showToast(message, duration = 2000) {
+            toastMessage.textContent = message;
+            toastMessage.classList.add('show');
+            
+            setTimeout(() => {
+                toastMessage.classList.remove('show');
+            }, duration);
+        }
+        
+        // 规则弹窗控制
+        function toggleRulesModal() {
+            rulesModal.classList.toggle('hidden');
+        }
+        
+        // 事件监听
+        restartBtn.addEventListener('click', initGame);
+        saveBtn.addEventListener('click', saveGameProgress);
+        loadBtn.addEventListener('click', loadGameProgress);
+        window.addEventListener('resize', renderCards);
+        rulesBtn.addEventListener('click', toggleRulesModal);
+        closeRules.addEventListener('click', toggleRulesModal);
+        
+        // 点击弹窗外部关闭
+        rulesModal.addEventListener('click', (e) => {
+            if (e.target === rulesModal) {
+                toggleRulesModal();
+            }
+        });
+        
+        // 初始化游戏
+        initGame();
+    </script>
+
+
+    </body></html>
