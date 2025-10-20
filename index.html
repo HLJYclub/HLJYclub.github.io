@@ -29,11 +29,6 @@
     <style type="text/tailwindcss">
         @layer utilities {
             .content-auto { content-visibility: auto; }
-            .card-container {
-                perspective: 1000px;
-                width: 100%;
-                height: 100%;
-            }
             .card {
                 position: relative;
                 width: 100%;
@@ -87,6 +82,11 @@
             .toast.show {
                 opacity: 1;
             }
+            .difficulty-btn.active {
+                background-color: #6366f1;
+                color: white;
+                transform: scale(1.05);
+            }
         }
     </style>
 </head>
@@ -99,31 +99,47 @@
             </h1>
         </header>
         
-        <!-- 控制区和规则区 -->
-        <div class="bg-white/80 backdrop-blur-sm rounded-xl p-4 mb-6 flex flex-wrap justify-between gap-4">
-            <button id="restart-btn" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all self-start">
-                <i class="fa fa-refresh"></i> 重新开始
-            </button>
-            
-            <!-- 保存和读取按钮 -->
-            <div class="flex gap-2">
-                <button id="save-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all self-start">
-                    <i class="fa fa-save"></i> 保存进度
+        <!-- 控制区和难度选择 -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-xl p-4 mb-6 flex flex-wrap justify-between gap-4 items-center">
+            <!-- 难度选择 -->
+            <div class="flex gap-3">
+                <button id="easy-btn" class="difficulty-btn bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition-all">
+                    <i class="fa fa-smile-o mr-1"></i> 简单 (20对)
                 </button>
-                <button id="load-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all self-start">
-                    <i class="fa fa-load"></i> 读取进度
+                <button id="hard-btn" class="difficulty-btn bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition-all">
+                    <i class="fa fa-frown-o mr-1"></i> 困难 (25对)
                 </button>
             </div>
             
-            <!-- 游戏规则按钮 -->
-            <button id="rules-btn" class="bg-secondary hover:bg-secondary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all self-start">
-                <i class="fa fa-book"></i> 游戏规则
-            </button>
+            <!-- 控制按钮组 -->
+            <div class="flex flex-wrap gap-2">
+                <button id="restart-btn" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                    <i class="fa fa-refresh"></i> 重新开始
+                </button>
+                
+                <button id="save-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                    <i class="fa fa-save"></i> 保存进度
+                </button>
+                
+                <button id="load-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                    <i class="fa fa-download"></i> 读取进度
+                </button>
+                
+                <button id="rules-btn" class="bg-secondary hover:bg-secondary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                    <i class="fa fa-book"></i> 游戏规则
+                </button>
+            </div>
+        </div>
+        
+        <!-- 游戏信息区 -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-xl p-3 mb-6 flex flex-wrap justify-between text-sm sm:text-base">
+            <div><i class="fa fa-puzzle-piece text-primary mr-1"></i> 已匹配: <span id="matched-count">0</span>/<span id="total-pairs">20</span></div>
+            <div><i class="fa fa-clock-o text-secondary mr-1"></i> 用时: <span id="game-time">00:00</span></div>
         </div>
         
         <!-- 游戏规则弹窗 -->
         <div id="rules-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
-            <div class="rules-box max-w-md w-full mx-4 transform transition-all">
+            <div class="rules-box max-w-md w-full mx-4">
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="text-xl font-bold text-primary">游戏规则</h2>
                     <button id="close-rules" class="text-gray-500 hover:text-gray-700">
@@ -132,13 +148,14 @@
                 </div>
                 <hr class="mb-4">
                 <ul class="list-disc pl-5 space-y-2 text-gray-700">
-                    <li>场上共有64张牌，32对相同的牌</li>
+                    <li>简单模式：40张牌，20对相同的牌</li>
+                    <li>困难模式：50张牌，25对相同的牌</li>
                     <li>所有卡牌初始状态均为背面朝上</li>
                     <li>点击任意卡牌可将其翻转，显示正面图片</li>
                     <li>每次最多可翻开两张卡牌</li>
-                    <li>若两张卡牌图片相同，则匹配成功，将保持翻开状态</li>
-                    <li>若两张卡牌图片不同，则会在1秒后自动翻回背面</li>
-                    <li>成功匹配所有32对卡牌后，游戏完成</li>
+                    <li>若两张卡牌图片相同，则匹配成功，保持翻开状态</li>
+                    <li>若两张卡牌图片不同，则1秒后自动翻回背面</li>
+                    <li>成功匹配所有牌对后，游戏完成</li>
                     <li>（小红1次 大红四格以上2次 大大红9格以上3次）</li>
                 </ul>
                 <div class="mt-4 text-center text-sm text-gray-500">
@@ -147,25 +164,36 @@
             </div>
         </div>
         
-        <!-- 游戏结束提示 (只在完成时显示) -->
-        <div id="completion-message" class="text-center mb-4 text-lg font-semibold text-green-600 hidden">恭喜你，完成了所有配对！</div>
+        <!-- 游戏结束提示 -->
+        <div id="completion-message" class="text-center mb-4 text-lg font-semibold text-green-600 hidden">
+            恭喜你，完成了所有配对！
+        </div>
         
         <!-- 提示消息 -->
         <div id="toast-message" class="toast">操作成功！</div>
         
         <!-- 游戏区 -->
-        <div id="game-board" class="grid grid-cols-8 gap-2 sm:gap-3"></div>
+        <div id="game-board" class="grid gap-2 sm:gap-3 justify-items-center"></div>
     </div>
 
     <script>
-        // 游戏配置
-        const config = {
-            cardCount: 64, // 8x8网格
-            pairsCount: 32,
-            imageBase: 'images/img',
-            imageExt: '.png',
-            saveKey: 'memoryCardGameSave' // 本地存储键名
+        // 游戏配置 - 简单20对，困难25对
+        const difficulties = {
+            easy: {
+                pairsCount: 20,
+                cardCount: 40,
+                gridCols: 8  // 8列布局更适合移动端
+            },
+            hard: {
+                pairsCount: 25,
+                cardCount: 50,
+                gridCols: 10  // 10列布局
+            }
         };
+        
+        // 当前游戏配置
+        let currentDifficulty = 'easy';
+        let config = { ...difficulties.easy };
         
         // 游戏状态
         let game = {
@@ -173,9 +201,9 @@
             flipped: [],
             matched: 0,
             locked: false,
-            // 用于保存的额外信息
             startTime: new Date().getTime(),
-            lastSaved: null
+            lastSaved: null,
+            timerInterval: null
         };
         
         // DOM元素
@@ -183,14 +211,24 @@
         const restartBtn = document.getElementById('restart-btn');
         const saveBtn = document.getElementById('save-btn');
         const loadBtn = document.getElementById('load-btn');
-        const completionMessage = document.getElementById('completion-message');
         const rulesBtn = document.getElementById('rules-btn');
         const rulesModal = document.getElementById('rules-modal');
         const closeRules = document.getElementById('close-rules');
         const toastMessage = document.getElementById('toast-message');
+        const completionMessage = document.getElementById('completion-message');
+        const easyBtn = document.getElementById('easy-btn');
+        const hardBtn = document.getElementById('hard-btn');
+        const matchedCountEl = document.getElementById('matched-count');
+        const totalPairsEl = document.getElementById('total-pairs');
+        const gameTimeEl = document.getElementById('game-time');
         
         // 初始化游戏
         function initGame() {
+            // 清除计时器
+            if (game.timerInterval) {
+                clearInterval(game.timerInterval);
+            }
+            
             // 重置游戏状态
             game = {
                 cards: [],
@@ -198,26 +236,45 @@
                 matched: 0,
                 locked: false,
                 startTime: new Date().getTime(),
-                lastSaved: null
+                lastSaved: null,
+                timerInterval: setInterval(updateGameTime, 1000)
             };
+            
+            // 更新UI显示
             gameBoard.innerHTML = '';
-            completionMessage.classList.add('hidden'); // 隐藏完成提示
+            completionMessage.classList.add('hidden');
+            matchedCountEl.textContent = '0';
+            totalPairsEl.textContent = config.pairsCount;
             
-            // 创建卡牌数据
+            // 设置网格布局
+            gameBoard.style.gridTemplateColumns = `repeat(${config.gridCols}, minmax(0, 1fr))`;
+            
+            // 创建并渲染卡牌
             createCards();
-            
-            // 渲染卡牌
             renderCards();
         }
         
         // 创建卡牌数据
         function createCards() {
-            // 创建32对卡牌
+            // 清空卡牌数组
+            game.cards = [];
+            
+            // 创建牌对 (简单20对，困难25对)
             for (let i = 1; i <= config.pairsCount; i++) {
-                const image = `${config.imageBase}${i}${config.imageExt}`;
+                const image = `images/img${i}.png`;
                 // 每对卡牌两个实例
-                game.cards.push({ id: `card-${i}-a`, image, matched: false });
-                game.cards.push({ id: `card-${i}-b`, image, matched: false });
+                game.cards.push({ 
+                    id: `card-${i}-a`, 
+                    image, 
+                    matched: false,
+                    flipped: false
+                });
+                game.cards.push({ 
+                    id: `card-${i}-b`, 
+                    image, 
+                    matched: false,
+                    flipped: false
+                });
             }
             
             // 随机排序
@@ -226,7 +283,11 @@
         
         // 渲染卡牌
         function renderCards() {
-            const cardSize = window.innerWidth < 640 ? '60px' : '80px';
+            // 根据屏幕尺寸和难度调整卡牌大小
+            const isMobile = window.innerWidth < 640;
+            const cardSize = isMobile 
+                ? (config.pairsCount === 20 ? '50px' : '45px') 
+                : (config.pairsCount === 20 ? '80px' : '70px');
             
             gameBoard.innerHTML = ''; // 清空游戏板
             
@@ -246,16 +307,16 @@
                 front.className = 'card-front';
                 
                 const img = document.createElement('img');
-                img.src = card.image + '?t=' + new Date().getTime();
+                img.src = card.image + '?t=' + new Date().getTime(); // 防止缓存
                 img.alt = `卡牌 ${index + 1}`;
                 img.style.width = '100%';
                 img.style.height = '100%';
                 img.style.objectFit = 'cover';
                 img.style.borderRadius = '6px';
                 img.onerror = function() {
+                    // 图片加载失败时显示占位符
                     this.src = '';
-                    this.alt = '图片缺失';
-                    front.innerHTML = `<i class="fa fa-picture-o text-gray-400 text-2xl"></i>`;
+                    front.innerHTML = `<i class="fa fa-picture-o text-gray-400 text-xl"></i>`;
                 };
                 
                 front.appendChild(img);
@@ -263,7 +324,7 @@
                 // 卡牌背面（问号）
                 const back = document.createElement('div');
                 back.className = 'card-back';
-                back.innerHTML = '<i class="fa fa-question text-2xl"></i>';
+                back.innerHTML = '<i class="fa fa-question text-xl"></i>';
                 
                 // 组装卡牌
                 cardEl.appendChild(front);
@@ -281,20 +342,16 @@
             const cardEl = gameBoard.children[index].querySelector('.card');
             
             // 防止无效点击
-            if (
-                game.locked || 
-                game.flipped.includes(index) || 
-                card.matched
-            ) {
+            if (game.locked || game.flipped.includes(index) || card.matched) {
                 return;
             }
             
             // 翻转卡牌
             cardEl.classList.add('flipped');
-            card.flipped = true; // 更新数据状态
+            card.flipped = true;
             game.flipped.push(index);
             
-            // 如果翻开了两张牌，检查匹配
+            // 两张牌都翻开时检查匹配
             if (game.flipped.length === 2) {
                 checkForMatch();
             }
@@ -313,18 +370,25 @@
                 card2.matched = true;
                 game.matched++;
                 
+                // 更新匹配计数显示
+                matchedCountEl.textContent = game.matched;
+                
                 // 清空翻开的卡牌
                 game.flipped = [];
                 game.locked = false;
                 
                 // 检查游戏是否结束
                 if (game.matched === config.pairsCount) {
+                    clearInterval(game.timerInterval);
                     setTimeout(() => {
                         completionMessage.classList.remove('hidden');
+                        showToast('恭喜你完成所有配对！', 3000);
                     }, 500);
+                } else {
+                    showToast('匹配成功！', 800);
                 }
             } else {
-                // 匹配失败，翻回卡牌（不显示提示）
+                // 匹配失败，翻回卡牌
                 setTimeout(() => {
                     const cardEl1 = gameBoard.children[index1].querySelector('.card');
                     const cardEl2 = gameBoard.children[index2].querySelector('.card');
@@ -348,16 +412,15 @@
             try {
                 // 准备要保存的数据
                 const saveData = {
+                    difficulty: currentDifficulty,
                     cards: game.cards,
                     matched: game.matched,
-                    flipped: game.flipped,
-                    locked: game.locked,
                     startTime: game.startTime,
                     lastSaved: new Date().getTime()
                 };
                 
                 // 保存到本地存储
-                localStorage.setItem(config.saveKey, JSON.stringify(saveData));
+                localStorage.setItem('memoryCardGameSave', JSON.stringify(saveData));
                 
                 // 更新游戏状态中的保存时间
                 game.lastSaved = saveData.lastSaved;
@@ -374,7 +437,7 @@
         function loadGameProgress() {
             try {
                 // 从本地存储读取数据
-                const savedData = localStorage.getItem(config.saveKey);
+                const savedData = localStorage.getItem('memoryCardGameSave');
                 
                 if (!savedData) {
                     showToast('没有找到保存的进度', 3000);
@@ -384,14 +447,25 @@
                 // 解析保存的数据
                 const parsedData = JSON.parse(savedData);
                 
+                // 恢复难度设置
+                setDifficulty(parsedData.difficulty);
+                
+                // 清除当前计时器
+                if (game.timerInterval) {
+                    clearInterval(game.timerInterval);
+                }
+                
                 // 恢复游戏状态
                 game = {
                     ...parsedData,
-                    // 确保锁定状态为false，避免加载后无法操作
+                    flipped: [],
                     locked: false,
-                    // 清空当前翻开的牌，避免加载后状态不一致
-                    flipped: []
+                    timerInterval: setInterval(updateGameTime, 1000)
                 };
+                
+                // 更新UI
+                matchedCountEl.textContent = game.matched;
+                totalPairsEl.textContent = config.pairsCount;
                 
                 // 重新渲染游戏
                 renderCards();
@@ -403,11 +477,39 @@
                 // 检查游戏是否已完成
                 if (game.matched === config.pairsCount) {
                     completionMessage.classList.remove('hidden');
+                    clearInterval(game.timerInterval);
                 }
             } catch (error) {
                 console.error('读取游戏进度失败:', error);
                 showToast('读取失败，请重试', 3000);
             }
+        }
+        
+        // 切换难度
+        function setDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            config = { ...difficulties[difficulty] };
+            
+            // 更新按钮状态
+            easyBtn.classList.remove('active');
+            hardBtn.classList.remove('active');
+            if (difficulty === 'easy') {
+                easyBtn.classList.add('active');
+            } else {
+                hardBtn.classList.add('active');
+            }
+            
+            // 重新初始化游戏
+            initGame();
+        }
+        
+        // 更新游戏时间
+        function updateGameTime() {
+            const now = new Date().getTime();
+            const elapsedSeconds = Math.floor((now - game.startTime) / 1000);
+            const minutes = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
+            const seconds = (elapsedSeconds % 60).toString().padStart(2, '0');
+            gameTimeEl.textContent = `${minutes}:${seconds}`;
         }
         
         // 显示提示消息
@@ -429,9 +531,13 @@
         restartBtn.addEventListener('click', initGame);
         saveBtn.addEventListener('click', saveGameProgress);
         loadBtn.addEventListener('click', loadGameProgress);
-        window.addEventListener('resize', renderCards);
         rulesBtn.addEventListener('click', toggleRulesModal);
         closeRules.addEventListener('click', toggleRulesModal);
+        easyBtn.addEventListener('click', () => setDifficulty('easy'));
+        hardBtn.addEventListener('click', () => setDifficulty('hard'));
+        
+        // 窗口大小变化时重新渲染
+        window.addEventListener('resize', renderCards);
         
         // 点击弹窗外部关闭
         rulesModal.addEventListener('click', (e) => {
@@ -441,8 +547,10 @@
         });
         
         // 初始化游戏
-        initGame();
+        document.addEventListener('DOMContentLoaded', () => {
+            setDifficulty('easy'); // 默认简单模式
+        });
     </script>
 
 
-    </body></html>
+</body></html>
